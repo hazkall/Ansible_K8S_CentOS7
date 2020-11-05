@@ -1,0 +1,12 @@
+---
+packages:
+  - "@Development Tools"
+  - wget
+  - bash-completion
+  - net-tools
+  - vim
+  - tmux
+  - curl
+  - epel-release
+
+...

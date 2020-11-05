@@ -1,0 +1,91 @@
+---
+#OS configuration
+- name: Disable SElinux (Temporary)
+  selinux:
+    state: disabled
+  
+- name: Disable SELinux (Permanent)
+  replace:
+    path: /etc/sysconfig/selinux
+    regexp: 'SELINUX=enforcing'
+    replace: 'SELINUX=disabled'
+
+- name: Disabling Swap
+  shell: swapoff -a
+
+- name: Disable Swap (Permanent)
+  replace:
+    path: /etc/fstab
+    regexp: '.*swap.*'
+    replace: '#&'
+  notify: disable firewalld 
+
+#Docker install
+
+- name: Install Docker
+  shell: curl -fsSL https://get.docker.com | bash
+  args:
+    warn: no
+  notify: 
+    - start docker
+
+- name: Docker group
+  user: 
+    name: "{{ item }}"
+    groups: docker
+    append: yes
+  loop:
+    - felipe
+    - edwin
+    - edson
+
+- name: Add yum repository for K8S
+  yum_repository:
+    name: Kubernetes
+    description: K8S Repository
+    file: k8s
+    baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+    enabled: yes
+    gpgkey: "{{ item }}"
+
+  loop:
+    - https://packages.cloud.google.com/yum/doc/yum-key.gpg
+    - https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+
+- name: Install Kubelet Kubeadm kubectl
+  yum:
+    name: "{{k8s_packages}}"
+    state: latest
+    update_cache: yes
+  notify: start kubelet
+
+- name: Ensure br_netfilter is enabled.
+  modprobe:
+    name: br_netfilter
+    state: present
+  
+- name: Module Kernel configuration
+  lineinfile:
+    path: /etc/modules-load.d/k8s.conf
+    line: $item
+    create: yes
+  loop:
+    - br_netfilter
+    - ip_vs
+    - ip_vs_rr
+    - ip_vs_sh
+    - ip_vs_wrr
+    - nf_conntrack_ipv4
+    
+- name: Configuration IPTables
+  sysctl:
+    sysctl_file: /etc/sysctl.d/k8s.conf
+    name: "{{ item }}"
+    value: '1'
+    state: present
+    reload: yes
+  loop:
+    - net.bridge.bridge-nf-call-ip6tables
+    - net.bridge.bridge-nf-call-iptables
+
+...

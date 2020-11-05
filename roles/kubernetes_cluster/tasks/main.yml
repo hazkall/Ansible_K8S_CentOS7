@@ -1,0 +1,86 @@
+---
+- name: Reset cluser
+  shell: kubeadm reset --force
+  args:
+    warn: no
+  register: kubeadm_reset
+
+- name: Init Cluster
+  shell:
+    kubeadm init
+  args:
+    warn: no
+  register: kubeadm_init
+
+- name: Save kubeadm init output
+  copy:
+    content: "{{ kubeadm_init.stdout }}"
+    dest: /root/kubeadminit
+
+- name: Create join script to workers nodes
+  shell:
+    tail -n2 /root/kubeadminit > /root/kubejoin.sh
+  args:
+    warn: no
+
+- name: Save script join on Ansible machine
+  fetch:
+    src: /root/kubejoin.sh
+    dest: ./kubejoin
+
+- name: Criando o diretorio .kube
+  file:
+    path: /home/{{ item }}/.kube
+    state: directory
+  loop:
+    - felipe
+    - edwin
+    - edson
+
+- name: Copy K8S files to home
+  shell:
+    cp /etc/kubernetes/admin.conf /home/{{ item }}/.kube/config
+  args:
+    warn: no
+  loop:
+    - felipe
+    - edwin
+    - edson
+
+- name: Permission to configuration file
+  file:
+    path: /home/{{ item.path }}/.kube/config
+    mode: 0775
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+  loop:
+    - { path: 'felipe', owner: 'felipe', group: 'felipe' }
+    - { path: 'edwin', owner: 'edwin', group: 'edwin'}
+    - { path: 'edson', owner: 'edson', group: 'edson'}
+
+- name: Configure pod networking.
+  shell: 
+    kubectl apply -f "{{ podnetwork }}"
+  args:
+    warn: no
+  become_user: felipe
+
+- name: Sleep
+  shell:
+    sleep 30
+  args:
+    warn: no
+
+- name: Kubectl get nodes
+  shell:
+    kubectl get nodes
+  args:
+    warn: no
+  register: nodes
+  become_user: felipe
+
+- name: Message to sysadmin
+  debug: 
+    msg: "{{ nodes.stdout }}"
+
+...

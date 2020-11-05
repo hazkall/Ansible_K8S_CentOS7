@@ -1,0 +1,6 @@
+- name: Default Playbook
+  hosts: all
+  roles:
+    - provisioning_server
+    - kubernetes_setup
+    - kubernetes_cluster

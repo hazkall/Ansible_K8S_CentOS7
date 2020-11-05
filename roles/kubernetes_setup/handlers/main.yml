@@ -1,0 +1,21 @@
+---
+- name: disable firewalld
+  systemd:
+    name: firewalld
+    state: stopped
+    enabled: no
+
+- name: start docker
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: start kubelet
+  systemd:
+    name: kubelet
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+...

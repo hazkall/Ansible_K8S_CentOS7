@@ -1,0 +1,47 @@
+---
+
+- name: Users Add
+  user:
+    name: "{{ item }}"
+    shell: /bin/bash
+    password: "{{ user_pass | password_hash('sha512', 'A512') }}"
+    state: present
+  loop:
+    - felipe
+    - edwin
+    - edson
+
+- name: Set authorization keys to users
+  authorized_key:
+    user: "{{ item.user }}"
+    state: present
+    key: "{{ lookup('file', '{{ item.key }}') }}"
+      
+  loop:
+    - {user: 'felipe', key: 'felipe.key'}
+    - {user: 'edwin', key: 'edwin.key'}
+  notify:
+    - restart sshd
+
+- name: Add users to Sudoers
+  lineinfile:
+    path: /etc/sudoers
+    line: "{{ item }}"
+  loop:
+    - 'felipe  ALL=(ALL)       NOPASSWD: ALL'
+    - 'edwin  ALL=(ALL)       NOPASSWD: ALL'
+    - 'edson  ALL=(ALL)       NOPASSWD: ALL'
+    
+
+- name: Update system
+  yum:
+    name: '*'
+    state: latest
+    update_cache: yes
+
+- name: Install pre-req packages
+  yum:
+    name: "{{ packages }}"
+    state: latest
+...
+
